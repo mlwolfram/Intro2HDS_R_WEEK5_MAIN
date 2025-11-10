@@ -1,0 +1,113 @@
+---
+title: "Practical"
+output: pdf_document
+date: "2025-11-10"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Load packages ###
+```{r}
+library(tidyverse)
+library(here)
+```
+
+### Read dataset ###
+```{r}
+hip_data <- read_csv(here("INPUTS/WEEK6/Hip Replacement CCG 1819.csv"))
+
+head(hip_data)
+```
+
+### Drop Gender == * ###
+```{r}
+hip_data_gender_valid <- hip_data %>%
+  filter(Gender != "*")
+
+head(hip_data_gender_valid)
+```
+
+### Select EQ5D criteria with gender ###
+```{r}
+gender_EQ5D <- hip_data_gender_valid %>%
+  select(`Gender`,`Pre-Op Q EQ5D Index`,`Post-Op Q EQ5D Index`) %>%
+  rename(Gender  = `Gender`,
+         EQ5D_Pre = `Pre-Op Q EQ5D Index`,
+         EQ5D_Post = `Post-Op Q EQ5D Index`
+         )
+
+head(gender_EQ5D)
+
+summary(gender_EQ5D)
+```
+
+### Clean gender_EQ5D values ###
+```{r}
+gender_EQ5D_noNA <- gender_EQ5D %>%
+  drop_na()
+
+head(gender_EQ5D_noNA)
+
+summary(gender_EQ5D_noNA)
+```
+### Convert to Tidy data ###
+```{r}
+head(gender_EQ5D_noNA)
+
+tidy_gender_EQ5D_noNA <- gender_EQ5D_noNA %>%
+  pivot_longer(c(EQ5D_Pre, EQ5D_Post),
+               names_to = 'Time',
+               names_prefix = 'EQ5D_',
+               values_to = 'EQ5D'
+               )
+
+head(tidy_gender_EQ5D_noNA)
+```
+
+### 1. Plot 'EQ-5D Index' scores pre and post operation for each gender ###
+```{r}
+tidy_gender_EQ5D_noNA <- mutate(tidy_gender_EQ5D_noNA, Gender_MF = ifelse(Gender == 1, "MALE", "FEMALE"))
+
+tidy_gender_EQ5D_noNA$Gender_MF <- factor(tidy_gender_EQ5D_noNA$Gender_MF, levels = c("MALE", "FEMALE"))
+tidy_gender_EQ5D_noNA$Time <- factor(tidy_gender_EQ5D_noNA$Time, levels = c('Pre', 'Post'))
+
+tidy_gender_EQ5D_noNA %>%
+  ggplot() +
+  geom_boxplot(aes(x = Time, y = EQ5D, colour = Gender_MF))
+```
+
+### 2. Calculate how many patients in this dataset have been told by a doctor that they have problems caused by a stroke ###
+```{r}
+head(hip_data)
+
+hip_data %>%
+  group_by(Stroke) %>%
+  summarise(mean(`Pre-Op Q Assisted`), .groups = "drop")
+
+hip_data %>%
+  filter(Stroke == 1) %>%
+  summarise(Count = n())
+```
+
+### 3. Create a clean and tidy table with pre and post operation activity levels ###
+```{r}
+head(hip_data)
+
+hip_data %>%
+  select(contains("activity", ignore.case = TRUE))
+
+tidy_activity_hip_data <- hip_data %>%
+  filter(`Pre-Op Q Activity` != 9, `Post-Op Q Activity` != 9) %>%
+  drop_na() %>%
+  pivot_longer(c(`Pre-Op Q Activity`, `Post-Op Q Activity`),
+               names_to = 'Time',
+               values_to = 'Activity',
+               values_drop_na = TRUE,
+               names_pattern = "(.*)-Op Q Activity",
+               ) %>%
+  select(Time, Activity) # Only show Time, and Activity for concise overview
+
+head(tidy_activity_hip_data)
+```

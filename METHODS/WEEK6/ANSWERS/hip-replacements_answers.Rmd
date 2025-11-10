@@ -1,0 +1,159 @@
+---
+title: "Hip Replacements"
+author: "DBlana"
+date: "17/08/2021"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Load packages
+
+```{r load-packages}
+library(tidyverse)
+```
+### Read in the data
+
+```{r read-data}
+hip_data <- read_csv(here("INPUTS/WEEK6/Hip Replacement CCG 1819.csv"))
+```
+### Inspect the data
+
+```{r inspect-data}
+glimpse(hip_data)
+```
+
+## Exercise 1: Plot 'EQ-5D Index' scores pre and post operation for each gender
+
+### Select gender and quality of life score pre and post operation
+
+```{r select-gender-eq5d}
+gender_EQ5D <- hip_data %>%
+  select(`Gender`,`Pre-Op Q EQ5D Index`,`Post-Op Q EQ5D Index`) %>%
+  rename(EQ5D_Pre = `Pre-Op Q EQ5D Index`,
+         EQ5D_Post = `Post-Op Q EQ5D Index`
+         )
+
+head(gender_EQ5D)
+```
+
+### Identify and remove missing values
+
+```{r missing-values}
+gender_EQ5D$Gender %>% unique()
+gender_EQ5D$Gender %>% table()
+gender_EQ5D %>% summary()
+
+gender_EQ5D_noNA <- gender_EQ5D %>%
+  drop_na() %>%
+  filter(Gender !='*')
+
+table(gender_EQ5D_noNA$Gender)
+summary(gender_EQ5D_noNA)
+```
+### Replace 1 and 2 with "male" and "female"
+
+```{r recode-gender}
+gender_EQ5D_noNA <-gender_EQ5D_noNA %>%
+  mutate(Gender = ifelse(Gender == 1, "male", "female"))
+
+```
+
+
+### Check that data is tidy
+The data frame is not tidy, because the column names EQ5D_Pre and EQ5D_Post contain *data*: the time point when EQ5D was measured: pre or post operation.  
+
+```{r tidy-data}
+head(gender_EQ5D_noNA)
+
+tidy_gender_EQ5D_noNA <- gender_EQ5D_noNA %>%
+  pivot_longer(c(EQ5D_Pre,EQ5D_Post),
+               names_to = 'Time',   # the name of the column to create from the data stored in the original column names
+               names_prefix = 'EQ5D_',  # remove this text from the start of each variable name
+               values_to = 'EQ5D' # the name of the column to create from the data stored in cell values
+               )
+
+head(tidy_gender_EQ5D_noNA)
+  
+```
+
+
+### Plot quality of life pre and post operation for each gender
+
+```{r plot-eq5d}
+
+# Turn Time into a "factor" so we can order the categories any way we want
+# otherwise they are alphabetical and "Post" ends up before "Pre"
+tidy_gender_EQ5D_noNA$Time <- factor(tidy_gender_EQ5D_noNA$Time,levels=c('Pre','Post'))
+
+# ggplot creates a blank canvas, to which we add a boxplot with "geom_boxplot"
+tidy_gender_EQ5D_noNA %>%
+  ggplot() +
+  geom_boxplot(aes(x = Time, y = EQ5D, colour = Gender))
+```
+
+## Exercise 2: Calculate how many patients in this dataset have been told by a doctor that they have problems caused by a stroke
+
+### Select Stroke column only
+
+```{r select-stroke-data}
+stroke_data <- hip_data %>%
+  select(Stroke)
+
+head(stroke_data)
+```
+### Calculate frequencies
+
+```{r stroke-frequencies}
+table(stroke_data)
+```
+
+## Exercise 3: Create a clean and tidy table with pre and post operation activity levels
+
+### Select activity pre and post operation
+
+```{r select-activity-data}
+activity_data <- hip_data %>%
+  select(`Pre-Op Q Activity`,`Post-Op Q Activity`) %>%
+  rename(Activity_Pre = `Pre-Op Q Activity`,
+         Activity_Post = `Post-Op Q Activity`
+         )
+
+head(activity_data)
+```
+
+### Remove missing values
+
+```{r activity-missing-values}
+activity_data %>% table()
+
+activity_data_noNA <- activity_data %>%
+  filter(Activity_Pre != 9,
+         Activity_Post != 9)
+
+activity_data_noNA %>% table()
+```
+
+### Check data is tidy
+
+```{r activity-tidy-data}
+head(activity_data_noNA)
+
+tidy_activity_data_noNA <- activity_data_noNA %>%
+  pivot_longer(c(Activity_Pre,Activity_Post),
+               names_to = 'Time',
+               names_prefix = 'Activity_',
+               values_to = 'Activity'
+               )
+
+head(tidy_activity_data_noNA)
+  
+```
+
+```
+```
+

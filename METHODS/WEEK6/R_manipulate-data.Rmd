@@ -17,6 +17,7 @@ library(readr)
 library(tidyr)
 library(dplyr)
 library(here)
+library(ggplot2)
 ```
 
 ### First, let's practice with pivoting
@@ -74,6 +75,7 @@ We will use the same data as last week. So read in the data from file fev.csv an
 
 ```{r}
 # Add your code here!
+fev_data <- read_csv(here("INPUTS/WEEK6/fev.csv"))
 ```
 
 Tip: If you got an error that "fev.csv" does not exist, check that you are working in the correct directory!
@@ -108,6 +110,7 @@ c(1,3,5) %>%
 
 ```{r}
 # Add your code here!
+fev_data %>% select(-c(1, 3, 5))
 ```
 
 
@@ -271,11 +274,66 @@ table(fev_data$age,fev_data$smoke)
 
 ```{r}
 # Add your code here!
+fev_data_mutate_sex <- fev_data %>%
+  mutate(gender = ifelse(sex == 0, "male", "female")) # Can also replace gender with sex to overwrite the value instead of mutating into a new column (decoded sex boolean)
+head(fev_data_mutate_sex)
 ```
 --> **Problem 2**: Why do smokers appear to have better lung function (higher forced expiratory volume - FEV)?
 
 ```{r}
 # Add your code here!
+fev_data %>%
+  group_by(smoke) %>%
+  summarise(count = n(), age_mean = mean(age), fev_mean = mean(fev)) # Mean age tends to be higher for smokers, thus higher lung function?
+
+fev_data %>%
+  group_by(smoke) %>%
+  slice_sample(n = 50) %>% # Let's try to compare both groups again when n is equal
+  summarise(count = n(), age_mean = mean(age), fev_mean = mean(fev)) # Still similar trend
+
+fev_data %>%
+  mutate(age_group = ifelse(age < mean(age), paste0("<", round(mean(age), 1)), paste0(">=", round(mean(age), 1)))) %>% # Now group by age_mean threshold
+  group_by(smoke, age_group) %>%
+  slice_sample(n = 5) %>%
+  summarise(count = n(), age_mean = mean(age), fev_mean = mean(fev), .groups = "drop") # Still have a correlation between age and fev
+
+fev_sum_smoke_0 <- fev_data %>%
+  filter(smoke == 0) %>%
+  group_by(age) %>%
+  summarise(fev_mean = mean(fev), .groups = "drop")
+fev_sum_smoke_0
+ggplot(fev_sum_smoke_0, aes(x = age, y = fev_mean)) +
+  geom_point(color = "blue") +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Age vs FEV mean (Non-Smokers)",
+       x = "Age", y = "FEV mean") +
+  theme_minimal() # So age has a linear relationship with fev for non-smokers
+
+fev_sum_smoke_1 <- fev_data %>%
+  filter(smoke == 1) %>%
+  group_by(age) %>%
+  summarise(fev_mean = mean(fev), .groups = "drop")
+fev_sum_smoke_1
+ggplot(fev_sum_smoke_1, aes(x = age, y = fev_mean)) +
+  geom_point(color = "blue") +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Age vs FEV mean (Smokers)",
+       x = "Age", y = "FEV mean") +
+  theme_minimal() # Also age has a linear relationship with fev for non-smokers
+
+fev_sum_smoke_all <- fev_data %>%
+  group_by(age) %>%
+  summarise(fev_mean = mean(fev), .groups = "drop")
+fev_sum_smoke_all
+ggplot(fev_sum_smoke_all, aes(x = age, y = fev_mean)) +
+  geom_point(color = "blue") +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Age vs FEV mean (Both Smokers and Non-Smokers)",
+       x = "Age", y = "FEV mean") +
+  theme_minimal() # Finally, age still has a linear relationship with fev for both smokers and non-smokers
+
+# Conclusion: Why do smokers appear to have better lung function (higher forced expiratory volume - FEV)?
+# It's because smokers are of the higher age group (have higher age mean), and since age has a direct proportionality with fev, higher age ~ higher fev
 ```
 
 Useful function: rename

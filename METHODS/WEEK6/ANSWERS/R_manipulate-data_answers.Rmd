@@ -1,0 +1,81 @@
+---
+title: "Answers to exercises on data manipulation"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Load packages
+We will be using the readr and dplyr packages from the Tidyverse family of packages. We will also load the "here" package that we will use to read in our data.
+
+```{r}
+library(readr)
+library(dplyr)
+library(here)
+```
+
+### FEV dataset
+
+Our data is in file fev.csv, we will save it in an object called fev_data:
+
+```{r}
+fev_data <- read_csv(here("INPUTS/WEEK6/fev.csv"))
+```
+
+**Problem 1**: Which subjects are male and which are female? (i.e. what does sex == 1 mean?)
+From the variables in our dataset, the only one that could be related to sex is height: we might expect that men are generally taller than women.
+
+```{r}
+fev_data %>%
+  group_by(sex) %>%
+  summarise(mean(height), sd(height))
+```
+This seems to imply that 1 == men. But are men taller than women in a young age? Let's look at the ages included in our dataset:
+
+```{r}
+table(fev_data$age)
+```
+We have people from 3 to 19 years old. Perhaps we should only look at older people:
+
+```{r}
+fev_data %>%
+  filter(age>15) %>%
+  group_by(sex) %>%
+  summarise(mean(height), sd(height))
+```
+Or we could group by sex and age:
+
+```{r}
+fev_data %>%
+  group_by(age,sex) %>%
+  summarise(n(),mean(height), sd(height)) %>%
+  arrange(desc(age)) %>%
+  print(n=40)
+```
+
+It does seem that people with sex == 1 at older ages are taller, so this suggests that 1 == men. 
+
+**Problem 2**: Why do smokers appear to have better lung function (higher forced expiratory volume - FEV)?
+
+Let's check first: is this true?
+
+```{r}
+fev_data %>%
+  group_by(smoke) %>%
+  summarise(mean(fev))
+```
+It does seem that smokers have higher FEV. But FEV is also dependent on age: younger people have lower FEV. As before, we could group by both smoke and age:  
+
+```{r}
+fev_data %>%
+  group_by(age,smoke) %>%
+  summarise(n = n(), mean = mean(fev), sd = sd(fev)) %>%
+  filter(n>5) %>%  # here I am only including rows where we have at least five people - to remove low counts
+  arrange(desc(age))
+```
+
+Now we can compare smoker and non-smokers at the same age, and we can see the smokers generally have lower FEV, as expected.
