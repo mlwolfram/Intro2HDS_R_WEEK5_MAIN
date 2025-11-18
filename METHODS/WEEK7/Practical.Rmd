@@ -1,0 +1,123 @@
+---
+title: "Practical"
+output: pdf_document
+date: "2025-11-18"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### LOAD PACKAGES
+```{r}
+library(tidyverse)
+library(scales)
+library(here)
+```
+
+### READ DATA
+```{r}
+ara_data <- read_csv(here("INPUTS/WEEK7/alcohol_related_admissions.csv"))
+aad_data <- read_csv(here("INPUTS/WEEK7/alcohol-admissions_deprivation-data.csv"))
+scotpho_data <- read_csv(here("INPUTS/WEEK7/scotpho_data_extract.csv"))
+izc_data <- read_csv(here("INPUTS/WEEK7/iz2011_codes_and_labels_21042020.csv"))
+```
+
+### EXERCISE 1
+Exercise 1: For the alcohol-related hospital admission data per intermediate data zone (the dataset we have produced in the Data Analysis in R section), plot the data distributions for each health board in 2019.
+
+```{r}
+head(ara_data)
+
+hb19_ara_data <- ara_data %>%
+  filter(year == 2019) %>%
+  select(alcohol_admissions, health_board) %>%
+  group_by(health_board) %>%
+  summarise(total = sum(alcohol_admissions))
+
+head(hb19_ara_data)
+
+hb19_ara_data %>%
+  ggplot(aes(x = health_board, y = total, color = "blue")) +
+  geom_point(size = 4) +
+  labs(title = "hb19 admissions",
+       x = "health_board",
+       y = "alcohol_admissions") +
+  scale_y_continuous(labels = comma) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ara_data %>% 
+  filter(year == 2019) %>%
+  ggplot(aes(x = alcohol_admissions)) + 
+  geom_histogram(bins = 15) +
+  facet_wrap(~health_board)
+```
+
+### EXERCISE 2
+Exercise 2: For which health boards do we have data on alcohol-related hospital admissions for each deprivation quintile?
+```{r}
+head(aad_data)
+
+hb_code_quintile_data <- aad_data %>%
+  select(hb_code = geography_code, quintile)
+
+head(hb_code_quintile_data)
+
+head(izc_data)
+
+hb_code_hb_name_data <- izc_data %>%
+  select(HB, HBName) %>%
+  distinct()
+
+head(hb_code_hb_name_data)
+
+hb_pairs_data <- hb_code_quintile_data %>%
+  group_by(quintile) %>%
+  summarise(
+    count_hb = n_distinct(hb_code),
+    member = paste(unique(hb_code), collapse = ", ")
+  )
+
+hb_code_quintile_data %>%
+  left_join(hb_code_hb_name_data, by = c("hb_code" = "HB")) %>%
+  group_by(quintile) %>%
+  summarise(
+    count_hb = n_distinct(hb_code),
+    hb_codes = paste(unique(hb_code), collapse = ", "),
+    hb_names = paste(unique(HBName), collapse = ", ")
+  )
+```
+
+### EXERCISE 3
+Exercise 3: Create boxplots showing alcohol admissions for each deprivation quintile. Create a different plot for each health board in the data set.
+```{r}
+head(aad_data)
+
+grampian_aad_data <- aad_data %>%
+  filter(geography_code == "S08000020", quintile != "Total") %>%
+  select(geography_code, quintile, indicator_measure)
+
+head(grampian_aad_data)
+
+grampian_aad_data %>%
+  ggplot(aes(x = quintile,
+             y = indicator_measure)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.4) +
+  labs(title = "grampian_data") +
+  theme(legend.position = "none")
+
+fife_aad_data <- aad_data %>%
+  filter(geography_code == "S08000029", quintile != "Total") %>%
+  select(geography_code, quintile, indicator_measure)
+
+head(fife_aad_data)
+
+fife_aad_data %>%
+  ggplot(aes(x = quintile,
+             y = indicator_measure)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.4) +
+  labs(title = "fife_data") +
+  theme(legend.position = "none")
+```

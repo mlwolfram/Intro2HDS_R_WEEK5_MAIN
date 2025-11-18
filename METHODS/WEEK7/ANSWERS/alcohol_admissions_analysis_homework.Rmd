@@ -1,0 +1,121 @@
+---
+title: "alcohol-related-admissions"
+author: "D Blana"
+date: "17/09/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load packages
+
+```{r load-packages}
+library(tidyverse)
+```
+
+## Exercise 1: For the alcohol-related hospital admission data per intermediate data zone, plot the data distributions for each health board in 2019.
+
+We can read in the data we saved before, which includes alcohol-related hospital admissions and health boards.
+
+```{r read-admission-healthboard-data}
+
+admission_data <- read_csv(here("INPUTS/WEEK7/alcohol_related_admissions.csv")) 
+glimpse(admission_data)
+
+```
+
+## Create histogram of hospital admissions for each health board in 2019
+
+```{r plot-data-distribution}
+
+admission_data %>% 
+  filter(year == 2019) %>%
+  ggplot(aes(x = alcohol_admissions)) + 
+  geom_histogram(bins = 15) +
+  facet_wrap(~health_board)
+
+```
+
+## Exercise 2: For which health boards do we have data on alcohol-related hospital admissions for each deprivation quintile? 
+
+First we need to read in the data
+
+```{r read-admission-deprivation-data}
+# alcohol-related hospital admissions
+data <- read_csv(here("INPUTS/WEEK7/alcohol-admissions_deprivation-data.csv")) # alcohol-related hospital admissions
+
+# intermediate data zone info
+intermediate_zone_codes <- read_csv(here("INPUTS/WEEK7/iz2011_codes_and_labels_21042020.csv")) 
+
+```
+
+## Prepare data
+We need different information from the geography dataset.
+
+```{r select-columns}
+glimpse(data)
+
+data <- data %>%
+  select(geography_code,quintile,period,indicator_measure)
+
+glimpse(intermediate_zone_codes)
+
+HB_info <- intermediate_zone_codes %>%
+  select(HB,HBName)
+
+```
+
+
+## Join the datasets
+We need to join the datasets so that we get the health board name in the same dataset as the hospital admissions.
+
+Here there are multiple rows that match in the two datasets, so we get duplicate rows in the joined dataset. We remove duplicates using the distinct function.
+
+```{r join-datasets}
+admission_data <- left_join(data,HB_info,by = c("geography_code" = "HB")) %>%
+  distinct()
+
+glimpse(admission_data)
+
+# Remove "NHS" from the health board name, and "financial year" from the period
+
+admission_data <- admission_data %>%
+  mutate(HBName = gsub("NHS ", "", HBName),
+         period = gsub(" financial year","", period)) %>%
+  rename(health_board = HBName,
+         alcohol_admissions = indicator_measure)
+
+glimpse(admission_data)
+```
+
+Then, we can find out how many health boards we have data for by using the unique function:
+
+```{r unique-health-boards}
+
+admission_data$health_board %>%
+  unique()
+
+```
+
+
+## Exercise 3: Create boxplots showing alcohol admissions for each deprivation quintile, in a different plot for each health board in the data set. 
+
+Show the data points for each period (using the "jitter" plot).
+Remove the "Total" deprivation value first.
+
+```{r boxplots}
+
+admission_data %>%    
+  filter(quintile != "Total") %>%
+  ggplot(aes(x = quintile,             
+             y = alcohol_admissions)) +    
+  geom_boxplot() +                        
+  geom_jitter(alpha = 0.4) +               
+  theme(legend.position = "none") + 
+  facet_wrap(~health_board)          
+
+```
+
+
